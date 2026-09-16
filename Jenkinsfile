@@ -485,17 +485,13 @@ pipeline {
          * =====================================================
          * 11. DEPLOY
          *
-         * IMPORTANT:
+         * DEV:
+         * Build → Push → Deploy
          *
-         * Build  -> DEV only
-         * Push   -> DEV only
+         * QA/PROD:
+         * Existing image → Deploy
          *
-         * QA/PROD use existing ECR image.
-         *
-         * Deployment always uses IMAGE DIGEST.
-         *
-         * The pull is retried if Docker has a temporary
-         * layer/overlayfs/network problem.
+         * Deployment always uses exact digest.
          * =====================================================
          */
 
@@ -722,7 +718,9 @@ echo "8. VERIFY PULLED IMAGE"
 
 echo "========================================="
 
-docker image inspect "\${IMAGE}"
+docker image inspect "\${IMAGE}" >/dev/null
+
+echo "Exact image digest pulled successfully."
 
 echo ""
 
@@ -783,7 +781,6 @@ ${env.CONTAINER_NAME} || true
 
 echo ""
 
-
 echo "========================================="
 
 echo "DEPLOYMENT COMPLETED"
@@ -803,6 +800,18 @@ REMOTE_SCRIPT
         /*
          * =====================================================
          * 12. VERIFY IMAGE DIGEST
+         *
+         * FIXED:
+         *
+         * Do NOT use:
+         *
+         * {{index .RepoDigests 0}}
+         *
+         * because Groovy/Jenkins can interfere with the
+         * Docker Go-template syntax.
+         *
+         * Instead, inspect the container image ID and compare
+         * it with the expected digest.
          * =====================================================
          */
 
@@ -821,13 +830,13 @@ REMOTE_SCRIPT
                         credentials: [env.SSH_CREDENTIAL_ID]
                     ) {
 
-                        def deployedImage = sh(
+                        def deployedImageId = sh(
                             script: """
 
                                 ssh -o StrictHostKeyChecking=no \
                                 ubuntu@${env.TARGET_HOST} \
                                 "docker inspect \
-                                --format='{{index .RepoDigests 0}}' \
+                                --format='ID={{.Image}}' \
                                 ${env.CONTAINER_NAME}"
 
                             """,
@@ -835,34 +844,68 @@ REMOTE_SCRIPT
                         ).trim()
 
 
-                        echo "Expected ECR Image:"
-                        echo "${env.ECR_IMAGE_DIGEST}"
+                        echo "Expected ECR Digest:"
+                        echo "${env.ECR_DIGEST}"
 
                         echo ""
 
-                        echo "Deployed Image:"
-                        echo "${deployedImage}"
+                        echo "Container Image ID:"
+                        echo "${deployedImageId}"
+
+                        echo ""
+
+
+                        /*
+                         * Get the image ID corresponding to the
+                         * expected digest on the remote server.
+                         */
+
+                        def expectedImageId = sh(
+                            script: """
+
+                                ssh -o StrictHostKeyChecking=no \
+                                ubuntu@${env.TARGET_HOST} \
+                                "docker image inspect \
+                                ${env.ECR_IMAGE_DIGEST} \
+                                --format='ID={{.Id}}'"
+
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+
+                        echo "Expected Image ID:"
+                        echo "${expectedImageId}"
 
                         echo ""
 
 
                         if (
-                            !deployedImage.contains(
-                                "${env.ECR_DIGEST}"
-                            )
+                            !deployedImageId ||
+                            !expectedImageId
                         ) {
 
                             error(
-                                "DIGEST MISMATCH! Expected ${env.ECR_DIGEST}, but deployed ${deployedImage}"
+                                "Unable to determine deployed image ID."
+                            )
+                        }
+
+
+                        if (
+                            deployedImageId != expectedImageId
+                        ) {
+
+                            error(
+                                "IMAGE MISMATCH! Container is not running the expected ECR image."
                             )
                         }
 
 
                         echo "=========================================="
 
-                        echo "DIGEST VERIFIED SUCCESSFULLY"
+                        echo "IMAGE DIGEST VERIFIED"
 
-                        echo "Same ECR image digest is running."
+                        echo "Container is running the exact image."
 
                         echo "=========================================="
                     }
