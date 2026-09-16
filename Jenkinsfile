@@ -485,15 +485,17 @@ pipeline {
          * =====================================================
          * 11. DEPLOY
          *
-         * FIXED VERSION
+         * IMPORTANT:
          *
-         * Deployment server:
+         * Build  -> DEV only
+         * Push   -> DEV only
          *
-         * 1. Check IAM role
-         * 2. Login to ECR
-         * 3. Pull exact digest
-         * 4. Stop old container
-         * 5. Start new container
+         * QA/PROD use existing ECR image.
+         *
+         * Deployment always uses IMAGE DIGEST.
+         *
+         * The pull is retried if Docker has a temporary
+         * layer/overlayfs/network problem.
          * =====================================================
          */
 
@@ -520,85 +522,278 @@ pipeline {
                         credentials: [env.SSH_CREDENTIAL_ID]
                     ) {
 
-                        sh """
+                        sh(
+                            script: """
 
-                            ssh -o StrictHostKeyChecking=no \
-                            ubuntu@${env.TARGET_HOST} "
+ssh -o StrictHostKeyChecking=no ubuntu@${env.TARGET_HOST} 'bash -s' <<'REMOTE_SCRIPT'
 
-                                set -e
-
-                                echo '========================================='
-                                echo 'REMOTE DEPLOYMENT'
-                                echo '========================================='
-
-                                echo 'Environment: ${params.ENVIRONMENT}'
-
-                                echo 'Image:'
-
-                                echo '${env.ECR_IMAGE_DIGEST}'
+set -e
 
 
-                                echo ''
+echo "========================================="
+echo "REMOTE DEPLOYMENT"
+echo "========================================="
 
-                                echo '1. Checking IAM role...'
+echo "Environment : ${params.ENVIRONMENT}"
 
-                                aws sts get-caller-identity
+echo "Image Tag   : ${params.IMAGE_TAG}"
 
+echo "Image Digest:"
+echo "${env.ECR_IMAGE_DIGEST}"
 
-                                echo ''
-
-                                echo '2. Logging into ECR...'
-
-                                aws ecr get-login-password \
-                                --region ${env.AWS_REGION} | \
-                                docker login \
-                                --username AWS \
-                                --password-stdin \
-                                ${env.ECR_REGISTRY}
+echo ""
 
 
-                                echo ''
+echo "========================================="
+echo "1. CHECKING IAM ROLE"
+echo "========================================="
 
-                                echo '3. Pulling EXACT image digest...'
+aws sts get-caller-identity
 
-                                docker pull \
-                                ${env.ECR_IMAGE_DIGEST}
-
-
-                                echo ''
-
-                                echo '4. Stopping old container...'
-
-                                docker rm -f \
-                                ${env.CONTAINER_NAME} \
-                                2>/dev/null || true
+echo ""
 
 
-                                echo ''
+echo "========================================="
+echo "2. CHECKING DISK SPACE"
+echo "========================================="
 
-                                echo '5. Starting container...'
+df -h /
 
-                                docker run -d \
-                                --name ${env.CONTAINER_NAME} \
-                                --restart unless-stopped \
-                                -p ${env.HOST_PORT}:${env.CONTAINER_PORT} \
-                                ${env.ECR_IMAGE_DIGEST}
+echo ""
 
 
-                                echo ''
+echo "========================================="
+echo "3. CHECKING DOCKER"
+echo "========================================="
 
-                                echo '6. Container status...'
+docker version
 
-                                docker ps \
-                                --filter name=${env.CONTAINER_NAME}
+echo ""
 
 
-                                echo ''
+echo "========================================="
+echo "4. DOCKER DISK USAGE"
+echo "========================================="
 
-                                echo 'Deployment completed.'
+docker system df || true
 
-                            "
-                        """
+echo ""
+
+
+echo "========================================="
+echo "5. LOGGING INTO ECR"
+echo "========================================="
+
+aws ecr get-login-password \
+--region ${env.AWS_REGION} | \
+docker login \
+--username AWS \
+--password-stdin \
+${env.ECR_REGISTRY}
+
+echo ""
+
+echo "ECR login successful."
+
+echo ""
+
+
+echo "========================================="
+echo "6. CLEANING UNUSED DOCKER DATA"
+echo "========================================="
+
+docker container prune -f || true
+
+docker image prune -f || true
+
+docker builder prune -af || true
+
+echo ""
+
+echo "Docker disk usage after cleanup:"
+
+docker system df || true
+
+echo ""
+
+echo "Disk space after cleanup:"
+
+df -h /
+
+echo ""
+
+
+echo "========================================="
+echo "7. PULLING EXACT IMAGE DIGEST"
+echo "========================================="
+
+IMAGE="${env.ECR_IMAGE_DIGEST}"
+
+echo "Image:"
+echo "\${IMAGE}"
+
+echo ""
+
+
+PULL_SUCCESS=false
+
+
+for ATTEMPT in 1 2 3
+do
+
+    echo "-----------------------------------------"
+
+    echo "Docker pull attempt: \${ATTEMPT}/3"
+
+    echo "-----------------------------------------"
+
+
+    if docker pull "\${IMAGE}"
+    then
+
+        echo ""
+
+        echo "Docker pull successful."
+
+        PULL_SUCCESS=true
+
+        break
+
+    else
+
+        echo ""
+
+        echo "Docker pull failed."
+
+        if [ "\${ATTEMPT}" -lt 3 ]
+        then
+
+            echo "Cleaning Docker image cache..."
+
+            docker image prune -af || true
+
+            echo ""
+
+            echo "Waiting 10 seconds before retry..."
+
+            sleep 10
+
+        fi
+
+    fi
+
+done
+
+
+if [ "\${PULL_SUCCESS}" != "true" ]
+then
+
+    echo ""
+
+    echo "========================================="
+
+    echo "DOCKER PULL FAILED"
+
+    echo "========================================="
+
+    echo ""
+
+    echo "Final disk status:"
+
+    df -h /
+
+    echo ""
+
+    echo "Docker disk usage:"
+
+    docker system df || true
+
+    exit 1
+
+fi
+
+
+echo ""
+
+
+echo "========================================="
+
+echo "8. VERIFY PULLED IMAGE"
+
+echo "========================================="
+
+docker image inspect "\${IMAGE}"
+
+echo ""
+
+
+echo "========================================="
+
+echo "9. STOPPING OLD CONTAINER"
+
+echo "========================================="
+
+docker rm -f ${env.CONTAINER_NAME} 2>/dev/null || true
+
+echo "Old container removed."
+
+echo ""
+
+
+echo "========================================="
+
+echo "10. STARTING NEW CONTAINER"
+
+echo "========================================="
+
+docker run -d \
+--name ${env.CONTAINER_NAME} \
+--restart unless-stopped \
+-p ${env.HOST_PORT}:${env.CONTAINER_PORT} \
+"\${IMAGE}"
+
+echo ""
+
+echo "Container started."
+
+echo ""
+
+
+echo "========================================="
+
+echo "11. CONTAINER STATUS"
+
+echo "========================================="
+
+docker ps \
+--filter name=${env.CONTAINER_NAME}
+
+echo ""
+
+
+echo "========================================="
+
+echo "12. CONTAINER LOGS"
+
+echo "========================================="
+
+docker logs \
+--tail 30 \
+${env.CONTAINER_NAME} || true
+
+echo ""
+
+
+echo "========================================="
+
+echo "DEPLOYMENT COMPLETED"
+
+echo "========================================="
+
+REMOTE_SCRIPT
+
+""".stripIndent()
+                        )
                     }
                 }
             }
