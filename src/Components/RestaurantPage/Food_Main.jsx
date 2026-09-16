@@ -8,11 +8,12 @@ import { data } from "../../restaurantData";
 import Discount from "../Assets/discount.svg";
 import CloseIcon from "@mui/icons-material/Close";
 import { Drawer, Box } from "@mui/material";
-import { Navbar } from "./Navbar";
+import { Navbar } from "./navbar";
 import ScrollToTop from "react-scroll-to-top";
 import { useWindowScroll } from "react-use";
 import { useNavigate } from "react-router-dom";
 import { PreLoader } from "../PreLoader";
+
 const Img = styled.img`
   cursor: pointer;
   display: block;
@@ -20,6 +21,7 @@ const Img = styled.img`
   width: 250px;
   objectfit: contain;
   height: 250px;
+
   &:hover {
     transform: scale(1.05);
     transition: transform 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
@@ -32,6 +34,7 @@ const Wrapper = styled.header`
   margin-top: 90px;
   background: #171a29;
 `;
+
 const settings = {
   dots: false,
   infinite: false,
@@ -41,8 +44,10 @@ const settings = {
   lazyLoading: "progressive",
   useCSS: true,
 };
+
 function Food_Main() {
   const navigate = useNavigate();
+
   // Preloader Fake Promise
   const [loading, isLoading] = useState(true);
 
@@ -52,7 +57,6 @@ function Food_Main() {
     }, 3000);
   }, []);
 
-  
   const handleClick = (id) => {
     localStorage.setItem("foodId", JSON.stringify(data[+id]));
     navigate(`/food/${id}`);
@@ -77,12 +81,15 @@ function Food_Main() {
 
   const sortingLinks = (e) => {
     let btns = e.currentTarget.querySelectorAll("p");
+
     btns.forEach((btn) => {
       if (btn.innerHTML === e.target.innerHTML)
         btn.classList.add("active_link");
       else btn.classList.remove("active_link");
     });
+
     let newArr = [...foodItems];
+
     if (e.target.innerHTML === "Delivery Time") {
       newArr.sort((a, b) => a.average_time - b.average_time);
     } else if (e.target.innerHTML === "Cost: Low To High") {
@@ -93,33 +100,43 @@ function Food_Main() {
       if (newArr.rating == "N/A") {
         newArr.rating = 0;
       }
+
       newArr.sort((a, b) => b.rating - a.rating);
     }
+
     setfoodItems(newArr);
   };
 
   const clear_btn = () => {
     let inputs = document.querySelectorAll(".check");
+
     for (var i = 0; i < inputs.length; i++) {
       inputs[i].checked = false;
     }
   };
+
   window.document.onload = function () {
     window.document.addEventListener("load", clear_btn, true);
   };
+
   const showRestaurants = () => {
     let foodForm = document.getElementById("foodForm");
     let checkBoxes = foodForm.querySelectorAll('input[type="checkbox"]');
+
     let result = [];
+
     checkBoxes.forEach((item) => {
       if (item.checked) {
         result.push(item.value.toLowerCase());
       }
     });
+
     let array = [],
       resturantId = [];
+
     for (var i = 0; i < data.length; i++) {
       let cuisines = data[i].cuisines;
+
       for (var j = 0; j < cuisines.length; j++) {
         if (
           result.includes(cuisines[j].toLowerCase().trim()) &&
@@ -130,18 +147,26 @@ function Food_Main() {
         }
       }
     }
+
     setfoodItems(array);
     setisDraweropen(false);
   };
+
   return loading ? (
     <PreLoader />
   ) : (
     <>
       <div className="scroll-container">
-        <div className="indicator" style={{ width: `${scrolled}%` }}></div>
+        <div
+          className="indicator"
+          style={{ width: `${scrolled}%` }}
+        ></div>
       </div>{" "}
+
       <ScrollToTop smooth color="#fc8019" />
+
       <Navbar />
+
       <Drawer
         anchor="right"
         open={isDraweropen}
@@ -157,7 +182,9 @@ function Food_Main() {
             }}
             style={{ cursor: "pointer" }}
           />
+
           <span className="h2">&nbsp;Filters</span>
+
           <div className="cuisines" id="foodForm">
             <div className="cuisine_1">
               <label class="control control-checkbox">
@@ -170,6 +197,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;American</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -181,6 +209,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_2">
               <label class="control control-checkbox">
                 <input
@@ -192,6 +221,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Bengali</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -203,6 +233,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_3">
               <label class="control control-checkbox">
                 <input
@@ -214,6 +245,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Biryani</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -225,6 +257,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_4">
               <label class="control control-checkbox">
                 <input
@@ -236,6 +269,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Combo</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -247,6 +281,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_5">
               <label class="control control-checkbox">
                 <input
@@ -258,6 +293,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Desserts</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -269,6 +305,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_6">
               <label class="control control-checkbox">
                 <input
@@ -280,6 +317,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Healthy Food</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -291,6 +329,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_7">
               <label class="control control-checkbox">
                 <input
@@ -302,6 +341,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Indian</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -313,6 +353,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_8">
               <label class="control control-checkbox">
                 <input
@@ -324,6 +365,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Sea Food</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -335,6 +377,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_9">
               <label class="control control-checkbox">
                 <input
@@ -346,6 +389,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;North Indian</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -357,6 +401,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_10">
               <label class="control control-checkbox">
                 <input
@@ -368,6 +413,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Pastas</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -379,6 +425,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_11">
               <label class="control control-checkbox">
                 <input
@@ -390,6 +437,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Punjabi</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -401,6 +449,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_12">
               <label class="control control-checkbox">
                 <input
@@ -412,6 +461,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;South Indian</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -423,6 +473,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_13">
               <label class="control control-checkbox">
                 <input
@@ -434,6 +485,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Sweets</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -445,6 +497,7 @@ function Food_Main() {
                 <div class="control_indicator"></div>
               </label>
             </div>
+
             <div className="cuisine_14">
               <label class="control control-checkbox">
                 <input
@@ -456,6 +509,7 @@ function Food_Main() {
                 <span className="check_Box">&nbsp;Thai</span>
                 <div class="control_indicator"></div>
               </label>
+
               <label class="control control-checkbox">
                 <input
                   type="checkbox"
@@ -468,14 +522,17 @@ function Food_Main() {
               </label>
             </div>
           </div>
+
           <button className="clear_btn" onClick={clear_btn}>
             CLEAR
           </button>
+
           <button className="show_food_btn" onClick={showRestaurants}>
             SHOW RESTAURANTS
           </button>
         </Box>
       </Drawer>
+
       <Wrapper>
         <div style={{ background: "#171a29", padding: "30px 180px" }}>
           <div className="container my-3">
@@ -486,66 +543,77 @@ function Food_Main() {
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/xax7qfs6dbmzdmzxq1dh"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/c59djn2nskqlf0ork6wc"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/qd0mwkv1mk3bxyy3x5fm"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/rl8zesrkte88twzgbma5"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/lgxbfmjfi9ba7sqbliek"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/ztpd5q9awnmmnefczn5x"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/jcjcvebiczqe5jr2vijo"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rs4krvosxjt6i5wyefvy"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/rng/md/carousel/production/kmewp8efed0ev7yvfyx6"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/marketing-dashboard/carousel/e8qsywpath9uli7tnikc"
                   alt="promotion img"
                 />
               </div>
+
               <div className="col">
                 <Img
                   src="https://res.cloudinary.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_520,h_520/marketing-dashboard/carousel/bmp2yqaaqouptllxmkei"
@@ -556,15 +624,20 @@ function Food_Main() {
           </div>
         </div>
       </Wrapper>
+
       <div className="container_navbar">
         <div className="nav_food">
-          <h2 className="restaurantNum">{foodItems.length} restaurants</h2>
+          <h2 className="restaurantNum">
+            {foodItems.length} restaurants
+          </h2>
+
           <div className="action_buttons" onClick={sortingLinks}>
             <p className="link">Relevance</p>
             <p className="link">Delivery Time</p>
             <p className="link">Rating</p>
             <p className="link">Cost: Low To High</p>
             <p className="link">Cost: High To Low</p>
+
             <p
               className="filter_link"
               onClick={() => {
@@ -576,6 +649,7 @@ function Food_Main() {
           </div>
         </div>
       </div>
+
       <div className="container_card">
         {foodItems.map((food_data) => (
           <>
@@ -589,13 +663,21 @@ function Food_Main() {
                   PROMOTED
                 </div>
               )}
+
               <img
                 src={food_data.img_url}
                 alt="Food_Image"
                 className="food_image"
               ></img>
-              <h4 className="Header_card">{food_data.name}</h4>
-              <p className="para_card">{food_data.cuisines.join(",")}</p>
+
+              <h4 className="Header_card">
+                {food_data.name}
+              </h4>
+
+              <p className="para_card">
+                {food_data.cuisines.join(",")}
+              </p>
+
               <div className="food_details">
                 <div
                   className="rating"
@@ -604,17 +686,25 @@ function Food_Main() {
                       food_data.rating < 4 ? "#db7c38" : "#48c479",
                   }}
                 >
-                  <i class="far fa-star"></i>&nbsp;{food_data.rating}
+                  <i class="far fa-star"></i>&nbsp;
+                  {food_data.rating}
                 </div>
+
                 <div className="average_time">
                   {food_data.average_time}&nbsp;MINS
                 </div>
+
                 <div className="average_price">
                   &#8377;{food_data.average_cost} FOR TWO
                 </div>
               </div>
+
               <div className="footer">
-                <img src={Discount} alt="" className="discount_icon" />
+                <img
+                  src={Discount}
+                  alt=""
+                  className="discount_icon"
+                />
                 50% off | use TRYNEW
               </div>
             </div>
