@@ -23,9 +23,9 @@ pipeline {
 
         ECR_REPOSITORY = 'devops-demo-app'
 
-        DEV_HOST  = 'DEV_PUBLIC_IP'
-        QA_HOST   = 'QA_PUBLIC_IP'
-        PROD_HOST = 'PROD_PUBLIC_IP'
+        DEV_HOST  = '16.192.126.10'
+        QA_HOST   = '16.16.126.99'
+        PROD_HOST = '13.48.204.116'
 
         SSH_CREDENTIAL_ID = 'ec2-ssh-key'
 
