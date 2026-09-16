@@ -9,7 +9,7 @@ import User from "../Assets/user.png";
 import CloseIcon from "@mui/icons-material/Close";
 import { Drawer, Box } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import "./Navbar.css";
+import "./navbar.css";
 import Firebase from "../../Firebase";
 
 export function Navbar() {
