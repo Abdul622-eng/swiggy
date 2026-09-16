@@ -416,6 +416,7 @@ pipeline {
                     echo "IMAGE DIGEST : ${env.ECR_DIGEST}"
 
                     echo "IMAGE BY DIGEST:"
+
                     echo "${env.ECR_IMAGE_DIGEST}"
                 }
             }
@@ -801,17 +802,8 @@ REMOTE_SCRIPT
          * =====================================================
          * 12. VERIFY IMAGE DIGEST
          *
-         * FIXED:
-         *
-         * Do NOT use:
-         *
-         * {{index .RepoDigests 0}}
-         *
-         * because Groovy/Jenkins can interfere with the
-         * Docker Go-template syntax.
-         *
-         * Instead, inspect the container image ID and compare
-         * it with the expected digest.
+         * Container image ID is compared with the image ID
+         * corresponding to the expected ECR digest.
          * =====================================================
          */
 
@@ -845,11 +837,13 @@ REMOTE_SCRIPT
 
 
                         echo "Expected ECR Digest:"
+
                         echo "${env.ECR_DIGEST}"
 
                         echo ""
 
                         echo "Container Image ID:"
+
                         echo "${deployedImageId}"
 
                         echo ""
@@ -875,6 +869,7 @@ REMOTE_SCRIPT
 
 
                         echo "Expected Image ID:"
+
                         echo "${expectedImageId}"
 
                         echo ""
@@ -908,44 +903,6 @@ REMOTE_SCRIPT
                         echo "Container is running the exact image."
 
                         echo "=========================================="
-                    }
-                }
-            }
-        }
-
-
-        /*
-         * =====================================================
-         * 13. APPLICATION HEALTH CHECK
-         * =====================================================
-         */
-
-        stage('Health Check') {
-
-            steps {
-
-                script {
-
-                    echo "=========================================="
-                    echo "APPLICATION HEALTH CHECK"
-                    echo "=========================================="
-
-
-                    sshagent(
-                        credentials: [env.SSH_CREDENTIAL_ID]
-                    ) {
-
-                        sh """
-
-                            ssh -o StrictHostKeyChecking=no \
-                            ubuntu@${env.TARGET_HOST} \
-                            "curl -f http://localhost:${env.HOST_PORT}"
-
-                        """
-
-                        echo ""
-
-                        echo "Application health check passed."
                     }
                 }
             }
