@@ -1,20 +1,24 @@
-# Use Node.js Alpine base image
+# Use Node.js base image
 FROM node:16-slim
 
-# Create and set the working directory inside the container
+# Create and set the working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
-COPY package.json package-lock.json /app/
+# Copy package files
+COPY package.json package-lock.json ./
 
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy the entire codebase to the working directory
-COPY . /app/
+# Copy the application source code
+COPY . .
 
-# Expose the port your app runs on (replace <PORT_NUMBER> with your app's actual port)
+# React development server configuration
+ENV PORT=2000
+ENV HOST=0.0.0.0
+
+# Expose application port
 EXPOSE 2000
 
-# Define the command to start your application (replace "start" with the actual command to start your app)
+# Start the React application
 CMD ["npm", "start"]
