@@ -2,10 +2,6 @@ pipeline {
 
     agent any
 
-    /*
-     * Do not perform Jenkins' automatic checkout.
-     * We will perform checkout explicitly in the Checkout stage.
-     */
     options {
         skipDefaultCheckout(true)
         timestamps()
@@ -35,7 +31,7 @@ pipeline {
 
     /*
      * =========================================================
-     * GLOBAL ENVIRONMENT VARIABLES
+     * ENVIRONMENT VARIABLES
      * =========================================================
      */
 
@@ -47,10 +43,7 @@ pipeline {
 
 
         /*
-         * EC2 SERVERS
-         *
-         * Replace these with your actual DEV / QA / PROD
-         * EC2 IP addresses.
+         * EC2 PRIVATE IP ADDRESSES
          */
 
         DEV_HOST  = '16.192.126.10'
@@ -68,7 +61,7 @@ pipeline {
 
 
         /*
-         * Docker settings
+         * Docker configuration
          */
 
         CONTAINER_NAME = 'devops-demo-app'
@@ -218,11 +211,9 @@ pipeline {
          * =====================================================
          * 5. DOCKER BUILD
          *
-         * IMPORTANT:
+         * ONLY DEV BUILDS THE IMAGE
          *
-         * BUILD ONLY HAPPENS FOR DEV.
-         *
-         * QA and PROD DO NOT BUILD.
+         * QA and PROD do NOT build.
          * =====================================================
          */
 
@@ -261,7 +252,7 @@ pipeline {
          * =====================================================
          * 6. DOCKER IMAGE TEST
          *
-         * Only DEV because DEV performs the build.
+         * ONLY DEV
          * =====================================================
          */
 
@@ -292,7 +283,7 @@ pipeline {
          * =====================================================
          * 7. PUSH TO ECR
          *
-         * PUSH ONLY FROM DEV.
+         * ONLY DEV
          *
          * QA and PROD never push.
          * =====================================================
@@ -330,12 +321,10 @@ pipeline {
          * =====================================================
          * 8. SELECT EXISTING IMAGE
          *
-         * Used by QA and PROD.
+         * QA / PROD
          *
          * NO BUILD
          * NO PUSH
-         *
-         * The image must already exist in ECR.
          * =====================================================
          */
 
@@ -359,9 +348,11 @@ pipeline {
 
                 echo "Image Tag   : ${params.IMAGE_TAG}"
 
-                echo "No Docker build will be performed."
+                echo "Using existing image from ECR"
 
-                echo "No Docker push will be performed."
+                echo "No Docker build"
+
+                echo "No Docker push"
 
 
                 sh '''
@@ -379,16 +370,6 @@ pipeline {
         /*
          * =====================================================
          * 9. GET ECR IMAGE DIGEST
-         *
-         * This is very important.
-         *
-         * We resolve:
-         *
-         * 1.0 -> sha256:xxxx
-         * 1.1 -> sha256:xxxx
-         * 1.2 -> sha256:xxxx
-         *
-         * Deployment will use this exact digest.
          * =====================================================
          */
 
@@ -504,11 +485,15 @@ pipeline {
          * =====================================================
          * 11. DEPLOY
          *
-         * IMPORTANT:
+         * FIXED VERSION
          *
-         * The deployment server does NOT build the image.
+         * Deployment server:
          *
-         * It pulls the EXACT ECR DIGEST.
+         * 1. Check IAM role
+         * 2. Login to ECR
+         * 3. Pull exact digest
+         * 4. Stop old container
+         * 5. Start new container
          * =====================================================
          */
 
@@ -538,63 +523,60 @@ pipeline {
                         sh """
 
                             ssh -o StrictHostKeyChecking=no \
-                            ubuntu@${env.TARGET_HOST} '
+                            ubuntu@${env.TARGET_HOST} "
 
                                 set -e
 
-                                echo "========================================="
-                                echo "REMOTE DEPLOYMENT"
-                                echo "========================================="
+                                echo '========================================='
+                                echo 'REMOTE DEPLOYMENT'
+                                echo '========================================='
 
-                                echo "Environment:"
-                                echo "${params.ENVIRONMENT}"
+                                echo 'Environment: ${params.ENVIRONMENT}'
 
-                                echo "Image:"
-                                echo "${env.ECR_IMAGE_DIGEST}"
+                                echo 'Image:'
+
+                                echo '${env.ECR_IMAGE_DIGEST}'
 
 
-                                echo ""
-                                echo "1. Checking IAM role..."
-                                echo ""
+                                echo ''
+
+                                echo '1. Checking IAM role...'
 
                                 aws sts get-caller-identity
 
 
-                                echo ""
-                                echo "2. Logging into ECR..."
-                                echo ""
+                                echo ''
 
-                                AWS_ACCOUNT_ID=\\\$(aws sts get-caller-identity \
-                                --query Account \
-                                --output text)
-
+                                echo '2. Logging into ECR...'
 
                                 aws ecr get-login-password \
                                 --region ${env.AWS_REGION} | \
                                 docker login \
                                 --username AWS \
                                 --password-stdin \
-                                \\\${AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com
+                                ${env.ECR_REGISTRY}
 
 
-                                echo ""
-                                echo "3. Pulling EXACT image digest..."
-                                echo ""
+                                echo ''
 
-                                docker pull ${env.ECR_IMAGE_DIGEST}
+                                echo '3. Pulling EXACT image digest...'
+
+                                docker pull \
+                                ${env.ECR_IMAGE_DIGEST}
 
 
-                                echo ""
-                                echo "4. Stopping old container..."
-                                echo ""
+                                echo ''
 
-                                docker rm -f ${env.CONTAINER_NAME} \
+                                echo '4. Stopping old container...'
+
+                                docker rm -f \
+                                ${env.CONTAINER_NAME} \
                                 2>/dev/null || true
 
 
-                                echo ""
-                                echo "5. Starting container..."
-                                echo ""
+                                echo ''
+
+                                echo '5. Starting container...'
 
                                 docker run -d \
                                 --name ${env.CONTAINER_NAME} \
@@ -603,19 +585,19 @@ pipeline {
                                 ${env.ECR_IMAGE_DIGEST}
 
 
-                                echo ""
-                                echo "6. Container status..."
-                                echo ""
+                                echo ''
+
+                                echo '6. Container status...'
 
                                 docker ps \
                                 --filter name=${env.CONTAINER_NAME}
 
 
-                                echo ""
-                                echo "Deployment completed."
-                                echo ""
+                                echo ''
 
-                            '
+                                echo 'Deployment completed.'
+
+                            "
                         """
                     }
                 }
@@ -626,9 +608,6 @@ pipeline {
         /*
          * =====================================================
          * 12. VERIFY IMAGE DIGEST
-         *
-         * Verify that the running container uses exactly
-         * the same ECR digest.
          * =====================================================
          */
 
@@ -651,13 +630,10 @@ pipeline {
                             script: """
 
                                 ssh -o StrictHostKeyChecking=no \
-                                ubuntu@${env.TARGET_HOST} '
-
-                                    docker inspect \
-                                    --format="{{index .RepoDigests 0}}" \
-                                    ${env.CONTAINER_NAME}
-
-                                '
+                                ubuntu@${env.TARGET_HOST} \
+                                "docker inspect \
+                                --format='{{index .RepoDigests 0}}' \
+                                ${env.CONTAINER_NAME}"
 
                             """,
                             returnStdout: true
@@ -691,7 +667,7 @@ pipeline {
 
                         echo "DIGEST VERIFIED SUCCESSFULLY"
 
-                        echo "Same image digest is running."
+                        echo "Same ECR image digest is running."
 
                         echo "=========================================="
                     }
@@ -724,20 +700,14 @@ pipeline {
                         sh """
 
                             ssh -o StrictHostKeyChecking=no \
-                            ubuntu@${env.TARGET_HOST} '
-
-                                echo "Testing application..."
-
-                                curl -f \
-                                http://localhost:${env.HOST_PORT}
-
-                                echo ""
-
-                                echo "Application is UP."
-
-                            '
+                            ubuntu@${env.TARGET_HOST} \
+                            "curl -f http://localhost:${env.HOST_PORT}"
 
                         """
+
+                        echo ""
+
+                        echo "Application health check passed."
                     }
                 }
             }
@@ -756,6 +726,7 @@ pipeline {
         success {
 
             echo ""
+
             echo "=========================================="
             echo "          PIPELINE SUCCESS"
             echo "=========================================="
@@ -769,6 +740,7 @@ pipeline {
             echo "TARGET     : ${env.TARGET_HOST}"
 
             echo "=========================================="
+
             echo ""
         }
 
@@ -776,6 +748,7 @@ pipeline {
         failure {
 
             echo ""
+
             echo "=========================================="
             echo "          PIPELINE FAILED"
             echo "=========================================="
@@ -785,6 +758,7 @@ pipeline {
             echo "ENVIRONMENT: ${params.ENVIRONMENT}"
 
             echo "=========================================="
+
             echo ""
         }
     }
