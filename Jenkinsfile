@@ -46,7 +46,7 @@ pipeline {
          * EC2 PRIVATE IP ADDRESSES
          */
 
-        DEV_HOST  = '13.48.67.105'
+        DEV_HOST  = '13.62.229.60'
 
         QA_HOST   = '16.171.115.119'
 
