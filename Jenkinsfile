@@ -46,11 +46,11 @@ pipeline {
          * EC2 PRIVATE IP ADDRESSES
          */
 
-        DEV_HOST  = '16.192.126.10'
+        DEV_HOST  = '13.48.67.105'
 
-        QA_HOST   = '16.16.126.99'
+        QA_HOST   = '16.171.115.119'
 
-        PROD_HOST = '13.48.204.116'
+        PROD_HOST = '13.48.71.57'
 
 
         /*
@@ -96,11 +96,11 @@ pipeline {
                 echo "=========================================="
 
                 echo "Repository:"
-                echo "https://github.com/Satoo36/swiggy.git"
+                echo "https://github.com/Abdul622-eng/swiggy.git"
 
                 git(
                     branch: 'main',
-                    url: 'https://github.com/Satoo36/swiggy.git'
+                    url: 'https://github.com/Abdul622-eng/swiggy.git'
                 )
 
                 echo "Checkout completed"
